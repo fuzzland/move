@@ -62,13 +62,13 @@ macro_rules! set_err_info {
 ///
 /// An `Interpreter` instance is a stand alone execution context for a function.
 /// It mimics execution on a single thread, with an call stack and an operand stack.
-pub(crate) struct Interpreter {
+pub struct Interpreter {
     /// Operand stack, where Move `Value`s are stored for stack operations.
-    operand_stack: Stack,
+    pub operand_stack: Stack,
     /// The stack of active functions.
-    call_stack: CallStack,
+    pub call_stack: CallStack,
     /// Whether to perform a paranoid type safety checks at runtime.
-    paranoid_type_checks: bool,
+    pub paranoid_type_checks: bool,
 }
 
 struct TypeWithLoader<'a, 'b> {
@@ -160,28 +160,28 @@ impl Interpreter {
                 ExitCode::Call(fh_idx) => {
                     let func = resolver.function_from_handle(fh_idx);
 
-                    if self.paranoid_type_checks {
-                        self.check_friend_or_private_call(&current_frame.function, &func)?;
-                    }
+                    // if self.paranoid_type_checks {
+                    //     self.check_friend_or_private_call(&current_frame.function, &func)?;
+                    // }
 
                     // Charge gas
-                    let module_id = func
-                        .module_id()
-                        .ok_or_else(|| {
-                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                                .with_message("Failed to get native function module id".to_string())
-                        })
-                        .map_err(|e| set_err_info!(current_frame, e))?;
-                    gas_meter
-                        .charge_call(
-                            module_id,
-                            func.name(),
-                            self.operand_stack
-                                .last_n(func.arg_count())
-                                .map_err(|e| set_err_info!(current_frame, e))?,
-                            (func.local_count() as u64).into(),
-                        )
-                        .map_err(|e| set_err_info!(current_frame, e))?;
+                    // let module_id = func
+                    //     .module_id()
+                    //     .ok_or_else(|| {
+                    //         PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    //             .with_message("Failed to get native function module id".to_string())
+                    //     })
+                    //     .map_err(|e| set_err_info!(current_frame, e))?;
+                    // gas_meter
+                    //     .charge_call(
+                    //         module_id,
+                    //         func.name(),
+                    //         self.operand_stack
+                    //             .last_n(func.arg_count())
+                    //             .map_err(|e| set_err_info!(current_frame, e))?,
+                    //         (func.local_count() as u64).into(),
+                    //     )
+                    //     .map_err(|e| set_err_info!(current_frame, e))?;
 
                     if func.is_native() {
                         self.call_native(
@@ -275,16 +275,6 @@ impl Interpreter {
         let is_generic = !ty_args.is_empty();
         for i in 0..arg_count {
             locals.store_loc(arg_count - i - 1, self.operand_stack.pop()?)?;
-
-            if self.paranoid_type_checks {
-                let ty = self.operand_stack.pop_ty()?;
-                if is_generic {
-                    ty.check_eq(&func.local_types()[arg_count - i - 1].subst(&ty_args)?)?;
-                } else {
-                    // Directly check against the expected type to save a clone here.
-                    ty.check_eq(&func.local_types()[arg_count - i - 1])?;
-                }
-            }
         }
         self.make_new_frame(func, ty_args, locals)
     }
@@ -298,25 +288,11 @@ impl Interpreter {
         ty_args: Vec<Type>,
         locals: Locals,
     ) -> PartialVMResult<Frame> {
-        let local_tys = if self.paranoid_type_checks {
-            if ty_args.is_empty() {
-                function.local_types().to_vec()
-            } else {
-                function
-                    .local_types()
-                    .iter()
-                    .map(|ty| ty.subst(&ty_args))
-                    .collect::<PartialVMResult<Vec<_>>>()?
-            }
-        } else {
-            vec![]
-        };
         Ok(Frame {
             pc: 0,
             locals,
             function,
-            ty_args,
-            local_tys,
+            ty_args
         })
     }
 
@@ -835,14 +811,14 @@ const OPERAND_STACK_SIZE_LIMIT: usize = 1024;
 const CALL_STACK_SIZE_LIMIT: usize = 1024;
 
 /// The operand stack.
-struct Stack {
+pub struct Stack {
     value: Vec<Value>,
     types: Vec<Type>,
 }
 
 impl Stack {
     /// Create a new empty operand stack.
-    fn new() -> Self {
+    pub fn new() -> Self {
         Stack {
             value: vec![],
             types: vec![],
@@ -938,11 +914,11 @@ impl Stack {
 
 /// A call stack.
 // #[derive(Debug)]
-struct CallStack(Vec<Frame>);
+pub struct CallStack(Vec<Frame>);
 
 impl CallStack {
     /// Create a new empty call stack.
-    fn new() -> Self {
+    pub fn new() -> Self {
         CallStack(vec![])
     }
 
@@ -970,17 +946,16 @@ impl CallStack {
 /// A `Frame` is the execution context for a function. It holds the locals of the function and
 /// the function itself.
 // #[derive(Debug)]
-struct Frame {
-    pc: u16,
-    locals: Locals,
-    function: Arc<Function>,
-    ty_args: Vec<Type>,
-    local_tys: Vec<Type>,
+pub struct Frame {
+    pub pc: u16,
+    pub locals: Locals,
+    pub function: Arc<Function>,
+    pub ty_args: Vec<Type>,
 }
 
 /// An `ExitCode` from `execute_code_unit`.
 #[derive(Debug)]
-enum ExitCode {
+pub enum ExitCode {
     Return,
     Call(FunctionHandleIndex),
     CallGeneric(FunctionInstantiationIndex),
@@ -999,7 +974,7 @@ fn check_ability(has_ability: bool) -> PartialVMResult<()> {
 
 impl Frame {
     /// Execute a Move function until a return or a call opcode is found.
-    fn execute_code(
+    pub fn execute_code(
         &mut self,
         resolver: &Resolver,
         interpreter: &mut Interpreter,
@@ -1664,17 +1639,17 @@ impl Frame {
                 // The reason for this design is we charge gas during instruction execution and we want to perform checks only after
                 // proper gas has been charged for each instruction.
 
-                if interpreter.paranoid_type_checks {
-                    interpreter.operand_stack.check_balance()?;
-                    Self::pre_execution_type_stack_transition(
-                        &self.local_tys,
-                        &self.locals,
-                        self.ty_args(),
-                        resolver,
-                        interpreter,
-                        instruction,
-                    )?;
-                }
+                // if interpreter.paranoid_type_checks {
+                //     interpreter.operand_stack.check_balance()?;
+                //     Self::pre_execution_type_stack_transition(
+                //         &self.local_tys,
+                //         &self.locals,
+                //         self.ty_args(),
+                //         resolver,
+                //         interpreter,
+                //         instruction,
+                //     )?;
+                // }
 
                 match instruction {
                     Bytecode::Pop => {
@@ -2211,17 +2186,17 @@ impl Frame {
                         vec_ref.swap(idx1, idx2, ty)?;
                     }
                 }
-                if interpreter.paranoid_type_checks {
-                    Self::post_execution_type_stack_transition(
-                        &self.local_tys,
-                        &self.ty_args,
-                        resolver,
-                        interpreter,
-                        instruction,
-                    )?;
-
-                    interpreter.operand_stack.check_balance()?;
-                }
+                // if interpreter.paranoid_type_checks {
+                //     Self::post_execution_type_stack_transition(
+                //         &self.local_tys,
+                //         &self.ty_args,
+                //         resolver,
+                //         interpreter,
+                //         instruction,
+                //     )?;
+                //
+                //     interpreter.operand_stack.check_balance()?;
+                // }
 
                 // invariant: advance to pc +1 is iff instruction at pc executed without aborting
                 self.pc += 1;

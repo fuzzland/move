@@ -469,7 +469,7 @@ impl ModuleCache {
 // entities. Each cache is protected by a `RwLock`. Operation in the Loader must be thread safe
 // (operating on values on the stack) and when cache needs updating the mutex must be taken.
 // The `pub(crate)` API is what a Loader offers to the runtime.
-pub(crate) struct Loader {
+pub struct Loader {
     scripts: RwLock<ScriptCache>,
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
@@ -511,7 +511,7 @@ pub(crate) struct Loader {
 }
 
 impl Loader {
-    pub(crate) fn new(natives: NativeFunctions, vm_config: VMConfig) -> Self {
+    pub fn new(natives: NativeFunctions, vm_config: VMConfig) -> Self {
         Self {
             scripts: RwLock::new(ScriptCache::new()),
             module_cache: RwLock::new(ModuleCache::new()),
@@ -1374,7 +1374,7 @@ impl Loader {
 //
 
 // A simple wrapper for a `Module` or a `Script` in the `Resolver`
-enum BinaryType {
+pub enum BinaryType {
     Module(Arc<Module>),
     Script(Arc<Script>),
 }
@@ -1382,9 +1382,9 @@ enum BinaryType {
 // A Resolver is a simple and small structure allocated on the stack and used by the
 // interpreter. It's the only API known to the interpreter and it's tailored to the interpreter
 // needs.
-pub(crate) struct Resolver<'a> {
-    loader: &'a Loader,
-    binary: BinaryType,
+pub struct Resolver<'a> {
+    pub loader: &'a Loader,
+    pub binary: BinaryType,
 }
 
 impl<'a> Resolver<'a> {
@@ -1684,7 +1684,7 @@ impl<'a> Resolver<'a> {
 // When code executes indexes in instructions are resolved against those runtime structure
 // so that any data needed for execution is immediately available
 #[derive(Debug)]
-pub(crate) struct Module {
+pub struct Module {
     #[allow(dead_code)]
     id: ModuleId,
     // primitive pools
@@ -1975,7 +1975,7 @@ impl Module {
 // When code executes, indexes in instructions are resolved against runtime structures
 // (rather then "compiled") to make available data needed for execution
 // #[derive(Debug)]
-struct Script {
+pub struct Script {
     // primitive pools
     script: CompiledScript,
 
@@ -2186,7 +2186,7 @@ enum Scope {
 // A runtime function
 // #[derive(Debug)]
 // https://github.com/rust-lang/rust/issues/70263
-pub(crate) struct Function {
+pub struct Function {
     #[allow(unused)]
     file_format_version: u32,
     index: FunctionDefinitionIndex,
@@ -2298,7 +2298,7 @@ impl Function {
         }
     }
 
-    pub(crate) fn local_count(&self) -> usize {
+    pub fn local_count(&self) -> usize {
         self.locals.len()
     }
 
@@ -2777,7 +2777,7 @@ impl Loader {
         self.type_to_type_tag_impl(ty)
     }
 
-    pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+    pub fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         let mut count = 0;
         self.type_to_type_layout_impl(ty, &mut count, 1)
     }

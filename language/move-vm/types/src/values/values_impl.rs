@@ -36,8 +36,8 @@ use std::{
  **************************************************************************************/
 
 /// Runtime representation of a Move value.
-#[derive(Debug)]
-enum ValueImpl {
+#[derive(Clone, Debug)]
+pub enum ValueImpl {
     Invalid,
 
     U8(u8),
@@ -65,7 +65,7 @@ enum ValueImpl {
 /// Except when not owned by the VM stack, a container always lives inside an Rc<RefCell<>>,
 /// making it possible to be shared by references.
 #[derive(Debug, Clone)]
-enum Container {
+pub enum Container {
     Locals(Rc<RefCell<Vec<ValueImpl>>>),
     Vec(Rc<RefCell<Vec<ValueImpl>>>),
     Struct(Rc<RefCell<Vec<ValueImpl>>>),
@@ -82,8 +82,8 @@ enum Container {
 /// A ContainerRef is a direct reference to a container, which could live either in the frame
 /// or in global storage. In the latter case, it also keeps a status flag indicating whether
 /// the container has been possibly modified.
-#[derive(Debug)]
-enum ContainerRef {
+#[derive(Clone, Debug)]
+pub enum ContainerRef {
     Local(Container),
     Global {
         status: Rc<RefCell<GlobalDataStatus>>,
@@ -95,14 +95,14 @@ enum ContainerRef {
 /// Clean - the data was only read.
 /// Dirty - the data was possibly modified.
 #[derive(Debug, Clone, Copy)]
-enum GlobalDataStatus {
+pub enum GlobalDataStatus {
     Clean,
     Dirty,
 }
 
 /// A Move reference pointing to an element in a container.
-#[derive(Debug)]
-struct IndexedRef {
+#[derive(Clone, Debug)]
+pub struct IndexedRef {
     idx: usize,
     container_ref: ContainerRef,
 }
@@ -110,7 +110,7 @@ struct IndexedRef {
 /// An umbrella enum for references. It is used to hide the internals of the public type
 /// Reference.
 #[derive(Debug)]
-enum ReferenceImpl {
+pub enum ReferenceImpl {
     IndexedRef(IndexedRef),
     ContainerRef(ContainerRef),
 }
@@ -132,8 +132,8 @@ enum ReferenceImpl {
  **************************************************************************************/
 /// A Move value -- a wrapper around `ValueImpl` which can be created only through valid
 /// means.
-#[derive(Debug)]
-pub struct Value(ValueImpl);
+#[derive(Clone, Debug)]
+pub struct Value(pub ValueImpl);
 
 /// An integer value in Move.
 #[derive(Debug)]
@@ -182,7 +182,7 @@ pub struct VectorRef(ContainerRef);
 /// A special "slot" in global storage that can hold a resource. It also keeps track of the status
 /// of the resource relative to the global state, which is necessary to compute the effects to emit
 /// at the end of transaction execution.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum GlobalValueImpl {
     /// No resource resides in this slot or in storage.
     None,
@@ -200,7 +200,7 @@ enum GlobalValueImpl {
 
 /// A wrapper around `GlobalValueImpl`, representing a "slot" in global storage that can
 /// hold a resource.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GlobalValue(GlobalValueImpl);
 
 /// The locals for a function frame. It allows values to be read, written or taken
@@ -337,7 +337,7 @@ impl ValueImpl {
  *
  **************************************************************************************/
 impl ValueImpl {
-    fn copy_value(&self) -> PartialVMResult<Self> {
+    pub fn copy_value(&self) -> PartialVMResult<Self> {
         use ValueImpl::*;
 
         Ok(match self {
@@ -2901,7 +2901,7 @@ impl Struct {
     }
 }
 
-struct AnnotatedValue<'a, 'b, T1, T2> {
+pub struct AnnotatedValue<'a, 'b, T1, T2> {
     layout: &'a T1,
     val: &'b T2,
 }

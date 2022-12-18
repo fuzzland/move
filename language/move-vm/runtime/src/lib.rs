@@ -11,13 +11,13 @@
 //! soon.
 
 pub mod data_cache;
-mod interpreter;
-mod loader;
+pub mod interpreter;
+pub mod loader;
 pub mod logging;
 pub mod move_vm;
 pub mod native_extensions;
 pub mod native_functions;
-mod runtime;
+pub mod runtime;
 pub mod session;
 #[macro_use]
 mod tracing;
