@@ -57,7 +57,7 @@ pub fn make_table_from_iter<S: Into<Box<str>>>(
 }
 
 pub struct NativeFunctions(
-    HashMap<AccountAddress, HashMap<String, HashMap<String, NativeFunction>>>,
+    pub HashMap<AccountAddress, HashMap<String, HashMap<String, NativeFunction>>>,
 );
 
 impl NativeFunctions {

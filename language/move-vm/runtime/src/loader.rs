@@ -48,7 +48,7 @@ type ScriptHash = [u8; 32];
 // A simple cache that offers both a HashMap and a Vector lookup.
 // Values are forced into a `Arc` so they can be used from multiple thread.
 // Access to this cache is always under a `RwLock`.
-struct BinaryCache<K, V> {
+pub struct BinaryCache<K, V> {
     id_map: HashMap<K, usize>,
     binaries: Vec<Arc<V>>,
 }
@@ -126,13 +126,13 @@ impl ScriptCache {
 // Types and Functions are pushed globally to the ModuleCache.
 // All accesses to the ModuleCache are under lock (exclusive).
 pub struct ModuleCache {
-    modules: BinaryCache<ModuleId, Module>,
-    structs: Vec<Arc<StructType>>,
-    functions: Vec<Arc<Function>>,
+    pub modules: BinaryCache<ModuleId, Module>,
+    pub structs: Vec<Arc<StructType>>,
+    pub functions: Vec<Arc<Function>>,
 }
 
 impl ModuleCache {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             modules: BinaryCache::new(),
             structs: vec![],
@@ -146,17 +146,17 @@ impl ModuleCache {
 
     // Retrieve a module by `ModuleId`. The module may have not been loaded yet in which
     // case `None` is returned
-    fn module_at(&self, id: &ModuleId) -> Option<Arc<Module>> {
+    pub fn module_at(&self, id: &ModuleId) -> Option<Arc<Module>> {
         self.modules.get(id).map(Arc::clone)
     }
 
     // Retrieve a function by index
-    fn function_at(&self, idx: usize) -> Arc<Function> {
+    pub fn function_at(&self, idx: usize) -> Arc<Function> {
         Arc::clone(&self.functions[idx])
     }
 
     // Retrieve a struct by index
-    fn struct_at(&self, idx: CachedStructIndex) -> Arc<StructType> {
+    pub fn struct_at(&self, idx: CachedStructIndex) -> Arc<StructType> {
         Arc::clone(&self.structs[idx.0])
     }
 
@@ -165,7 +165,7 @@ impl ModuleCache {
     // The VM is pretty much stopped waiting for this to finish
     //
 
-    fn insert(
+    pub fn insert(
         &mut self,
         natives: &NativeFunctions,
         id: ModuleId,
@@ -1733,7 +1733,7 @@ pub struct Module {
 }
 
 impl Module {
-    fn new(
+    pub fn new(
         module: CompiledModule,
         cache: &ModuleCache,
     ) -> Result<Self, (PartialVMError, CompiledModule)> {
@@ -2206,7 +2206,7 @@ pub struct Function {
 }
 
 impl Function {
-    fn new(
+    pub fn new(
         natives: &NativeFunctions,
         index: FunctionDefinitionIndex,
         def: &FunctionDefinition,

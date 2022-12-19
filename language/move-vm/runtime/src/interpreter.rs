@@ -812,8 +812,8 @@ const CALL_STACK_SIZE_LIMIT: usize = 1024;
 
 /// The operand stack.
 pub struct Stack {
-    value: Vec<Value>,
-    types: Vec<Type>,
+    pub value: Vec<Value>,
+    pub types: Vec<Type>,
 }
 
 impl Stack {
@@ -837,7 +837,7 @@ impl Stack {
     }
 
     /// Pop a `Value` off the stack or abort execution if the stack is empty.
-    fn pop(&mut self) -> PartialVMResult<Value> {
+    pub fn pop(&mut self) -> PartialVMResult<Value> {
         self.value
             .pop()
             .ok_or_else(|| PartialVMError::new(StatusCode::EMPTY_VALUE_STACK))
