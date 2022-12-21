@@ -333,7 +333,7 @@ fn deserialize_compiled_script(
 }
 
 /// Module internal function that manages deserialization of modules.
-fn deserialize_compiled_module(
+pub fn deserialize_compiled_module(
     binary: &[u8],
     max_binary_format_version: u32,
 ) -> BinaryLoaderResult<CompiledModule> {
