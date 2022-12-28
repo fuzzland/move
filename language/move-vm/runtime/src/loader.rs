@@ -523,6 +523,13 @@ impl Loader {
         }
     }
 
+
+    pub fn set_structs(&mut self, structs: Vec<Arc<StructType>>) {
+        for i in structs {
+            self.module_cache.write().structs.push(i);
+        }
+    }
+
     pub(crate) fn vm_config(&self) -> &VMConfig {
         &self.vm_config
     }
@@ -1324,7 +1331,7 @@ impl Loader {
         self.module_cache.read().structs.get(idx.0).map(Arc::clone)
     }
 
-    pub(crate) fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
+    pub fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
         match ty {
             Type::Bool
             | Type::U8
@@ -2326,7 +2333,7 @@ impl Function {
         &self.local_types
     }
 
-    pub(crate) fn return_types(&self) -> &[Type] {
+    pub fn return_types(&self) -> &[Type] {
         &self.return_types
     }
 
