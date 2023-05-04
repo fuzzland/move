@@ -2209,7 +2209,7 @@ pub struct Function {
     name: Identifier,
     return_types: Vec<Type>,
     local_types: Vec<Type>,
-    parameter_types: Vec<Type>,
+    pub parameter_types: Vec<Type>,
 }
 
 impl Function {
@@ -2780,7 +2780,7 @@ impl Loader {
         })
     }
 
-    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+    pub fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
         self.type_to_type_tag_impl(ty)
     }
 

@@ -395,7 +395,7 @@ impl Container {
         })
     }
 
-    fn copy_by_ref(&self) -> Self {
+    pub fn copy_by_ref(&self) -> Self {
         match self {
             Self::Vec(r) => Self::Vec(Rc::clone(r)),
             Self::Struct(r) => Self::Struct(Rc::clone(r)),
