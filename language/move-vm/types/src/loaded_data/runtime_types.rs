@@ -10,6 +10,7 @@ use move_core_types::{
     gas_algebra::AbstractMemorySize, identifier::Identifier, language_storage::ModuleId,
     vm_status::StatusCode,
 };
+use serde::{Deserialize, Serialize};
 
 pub const TYPE_DEPTH_MAX: usize = 256;
 
@@ -30,10 +31,10 @@ impl StructType {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct CachedStructIndex(pub usize);
 
-#[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Type {
     Bool,
     U8,
