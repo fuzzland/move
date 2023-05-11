@@ -2185,7 +2185,7 @@ impl Script {
 
 // A simple wrapper for the "owner" of the function (Module or Script)
 #[derive(Debug)]
-enum Scope {
+pub enum Scope {
     Module(ModuleId),
     Script(ScriptHash),
 }
@@ -2195,20 +2195,20 @@ enum Scope {
 // https://github.com/rust-lang/rust/issues/70263
 pub struct Function {
     #[allow(unused)]
-    file_format_version: u32,
-    index: FunctionDefinitionIndex,
-    code: Vec<Bytecode>,
-    parameters: Signature,
-    return_: Signature,
-    locals: Signature,
-    type_parameters: Vec<AbilitySet>,
-    native: Option<NativeFunction>,
-    def_is_native: bool,
-    def_is_friend_or_private: bool,
-    scope: Scope,
-    name: Identifier,
-    return_types: Vec<Type>,
-    local_types: Vec<Type>,
+    pub file_format_version: u32,
+    pub index: FunctionDefinitionIndex,
+    pub code: Vec<Bytecode>,
+    pub parameters: Signature,
+    pub return_: Signature,
+    pub locals: Signature,
+    pub type_parameters: Vec<AbilitySet>,
+    pub native: Option<NativeFunction>,
+    pub def_is_native: bool,
+    pub def_is_friend_or_private: bool,
+    pub scope: Scope,
+    pub name: Identifier,
+    pub return_types: Vec<Type>,
+    pub local_types: Vec<Type>,
     pub parameter_types: Vec<Type>,
 }
 
