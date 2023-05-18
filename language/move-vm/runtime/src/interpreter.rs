@@ -134,7 +134,7 @@ impl Interpreter {
             let resolver = current_frame.resolver(loader);
             let exit_code =
                 current_frame //self
-                    .execute_code(&resolver, &mut self, data_store, gas_meter)
+                    .execute_code(&resolver, &mut self, data_store, gas_meter, &mut DummyTracer{})
                     .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
             match exit_code {
                 ExitCode::Return => {
@@ -218,25 +218,25 @@ impl Interpreter {
                         self.check_friend_or_private_call(&current_frame.function, &func)?;
                     }
 
-                    // Charge gas
-                    let module_id = func
-                        .module_id()
-                        .ok_or_else(|| {
-                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                                .with_message("Failed to get native function module id".to_string())
-                        })
-                        .map_err(|e| set_err_info!(current_frame, e))?;
-                    gas_meter
-                        .charge_call_generic(
-                            module_id,
-                            func.name(),
-                            ty_args.iter().map(|ty| TypeWithLoader { ty, loader }),
-                            self.operand_stack
-                                .last_n(func.arg_count())
-                                .map_err(|e| set_err_info!(current_frame, e))?,
-                            (func.local_count() as u64).into(),
-                        )
-                        .map_err(|e| set_err_info!(current_frame, e))?;
+                    // // Charge gas
+                    // let module_id = func
+                    //     .module_id()
+                    //     .ok_or_else(|| {
+                    //         PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    //             .with_message("Failed to get native function module id".to_string())
+                    //     })
+                    //     .map_err(|e| set_err_info!(current_frame, e))?;
+                    // gas_meter
+                    //     .charge_call_generic(
+                    //         module_id,
+                    //         func.name(),
+                    //         ty_args.iter().map(|ty| TypeWithLoader { ty, loader }),
+                    //         self.operand_stack
+                    //             .last_n(func.arg_count())
+                    //             .map_err(|e| set_err_info!(current_frame, e))?,
+                    //         (func.local_count() as u64).into(),
+                    //     )
+                    //     .map_err(|e| set_err_info!(current_frame, e))?;
 
                     if func.is_native() {
                         self.call_native(
@@ -972,16 +972,27 @@ fn check_ability(has_ability: bool) -> PartialVMResult<()> {
     }
 }
 
+pub trait ItyFuzzTracer {
+    fn on_step(&mut self, interpreter: &Interpreter, frame: &Frame, pc: u16, instruction: &Bytecode);
+}
+
+pub struct DummyTracer;
+
+impl ItyFuzzTracer for DummyTracer {
+    fn on_step(&mut self, _interpreter: &Interpreter, _frame: &Frame, _pc: u16, instruction: &Bytecode) {}
+}
+
 impl Frame {
     /// Execute a Move function until a return or a call opcode is found.
-    pub fn execute_code(
+    pub fn execute_code<TR: ItyFuzzTracer>(
         &mut self,
         resolver: &Resolver,
         interpreter: &mut Interpreter,
         data_store: &mut impl DataStore,
         gas_meter: &mut impl GasMeter,
+        tracer: &mut TR,
     ) -> VMResult<ExitCode> {
-        self.execute_code_impl(resolver, interpreter, data_store, gas_meter)
+        self.execute_code_impl(resolver, interpreter, data_store, gas_meter, tracer)
             .map_err(|e| {
                 let e = if cfg!(feature = "testing") || cfg!(feature = "stacktrace") {
                     e.with_exec_state(interpreter.get_internal_state())
@@ -1593,12 +1604,13 @@ impl Frame {
         Ok(())
     }
 
-    fn execute_code_impl(
+    fn execute_code_impl<TR: ItyFuzzTracer>(
         &mut self,
         resolver: &Resolver,
         interpreter: &mut Interpreter,
         data_store: &mut impl DataStore,
         gas_meter: &mut impl GasMeter,
+        tracer: &mut TR,
     ) -> PartialVMResult<ExitCode> {
         use SimpleInstruction as S;
 
@@ -2221,7 +2233,7 @@ impl Frame {
         &self.ty_args
     }
 
-    fn resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
+    pub fn resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
         self.function.get_resolver(loader)
     }
 

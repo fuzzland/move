@@ -49,8 +49,8 @@ type ScriptHash = [u8; 32];
 // Values are forced into a `Arc` so they can be used from multiple thread.
 // Access to this cache is always under a `RwLock`.
 pub struct BinaryCache<K, V> {
-    id_map: HashMap<K, usize>,
-    binaries: Vec<Arc<V>>,
+    pub id_map: HashMap<K, usize>,
+    pub binaries: Vec<Arc<V>>,
 }
 
 impl<K, V> BinaryCache<K, V>
@@ -64,7 +64,7 @@ where
         }
     }
 
-    fn insert(&mut self, key: K, binary: V) -> &Arc<V> {
+    pub fn insert(&mut self, key: K, binary: V) -> &Arc<V> {
         self.binaries.push(Arc::new(binary));
         let idx = self.binaries.len() - 1;
         self.id_map.insert(key, idx);
@@ -73,7 +73,7 @@ where
             .expect("BinaryCache: last() after push() impossible failure")
     }
 
-    fn get(&self, key: &K) -> Option<&Arc<V>> {
+    pub fn get(&self, key: &K) -> Option<&Arc<V>> {
         self.id_map.get(key).and_then(|idx| self.binaries.get(*idx))
     }
 }
@@ -192,7 +192,7 @@ impl ModuleCache {
         }
     }
 
-    fn add_module(&mut self, natives: &NativeFunctions, module: &CompiledModule) -> VMResult<()> {
+    pub fn add_module(&mut self, natives: &NativeFunctions, module: &CompiledModule) -> VMResult<()> {
         let starting_idx = self.structs.len();
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
@@ -471,7 +471,7 @@ impl ModuleCache {
 // The `pub(crate)` API is what a Loader offers to the runtime.
 pub struct Loader {
     scripts: RwLock<ScriptCache>,
-    module_cache: RwLock<ModuleCache>,
+    pub module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
     natives: NativeFunctions,
 
@@ -1420,7 +1420,7 @@ impl<'a> Resolver<'a> {
     // Function resolution
     //
 
-    pub(crate) fn function_from_handle(&self, idx: FunctionHandleIndex) -> Arc<Function> {
+    pub fn function_from_handle(&self, idx: FunctionHandleIndex) -> Arc<Function> {
         let idx = match &self.binary {
             BinaryType::Module(module) => module.function_at(idx.0),
             BinaryType::Script(script) => script.function_at(idx.0),
@@ -1428,7 +1428,7 @@ impl<'a> Resolver<'a> {
         self.loader.function_at(idx)
     }
 
-    pub(crate) fn function_from_instantiation(
+    pub fn function_from_instantiation(
         &self,
         idx: FunctionInstantiationIndex,
     ) -> Arc<Function> {
@@ -1439,7 +1439,7 @@ impl<'a> Resolver<'a> {
         self.loader.function_at(func_inst.handle)
     }
 
-    pub(crate) fn instantiate_generic_function(
+    pub fn instantiate_generic_function(
         &self,
         idx: FunctionInstantiationIndex,
         type_params: &[Type],
@@ -2353,7 +2353,7 @@ impl Function {
         }
     }
 
-    pub(crate) fn is_native(&self) -> bool {
+    pub fn is_native(&self) -> bool {
         self.def_is_native
     }
 
