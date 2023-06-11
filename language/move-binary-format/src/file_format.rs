@@ -626,7 +626,7 @@ impl Ability {
 /// A set of `Ability`s
 #[derive(Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(feature = "fuzzing", derive(arbitrary::Arbitrary))]
-pub struct AbilitySet(u8);
+pub struct AbilitySet(pub u8);
 
 impl AbilitySet {
     /// The empty ability set
