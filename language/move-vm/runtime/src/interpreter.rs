@@ -22,6 +22,7 @@ use move_vm_types::{
     data_store::DataStore,
     gas::{GasMeter, SimpleInstruction},
     loaded_data::runtime_types::Type,
+    natives::function::NativeResult,
     values::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
         Vector, VectorRef,
@@ -128,7 +129,7 @@ impl Interpreter {
         }
 
         let mut current_frame = self
-            .make_new_frame(function, ty_args, locals)
+            .make_new_frame(loader, function, ty_args, locals)
             .map_err(|err| self.set_location(err))?;
         loop {
             let resolver = current_frame.resolver(loader);
@@ -196,7 +197,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, vec![])
+                        .make_call_frame(loader, func, vec![])
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -246,7 +247,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, ty_args)
+                        .make_call_frame(loader, func, ty_args)
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -267,6 +268,7 @@ impl Interpreter {
     /// function are incorrectly attributed to the caller.
     fn make_call_frame(
         &mut self,
+        loader: &Loader,
         func: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> PartialVMResult<Frame> {
@@ -276,7 +278,7 @@ impl Interpreter {
         for i in 0..arg_count {
             locals.store_loc(arg_count - i - 1, self.operand_stack.pop()?)?;
         }
-        self.make_new_frame(func, ty_args, locals)
+        self.make_new_frame(loader, func, ty_args, locals)
     }
 
     /// Create a new `Frame` given a `Function` and the function `Locals`.
@@ -284,6 +286,7 @@ impl Interpreter {
     /// The locals must be loaded before calling this.
     fn make_new_frame(
         &self,
+        loader: &Loader,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         locals: Locals,
@@ -343,16 +346,14 @@ impl Interpreter {
             args.push_front(self.operand_stack.pop()?);
         }
 
-        if self.paranoid_type_checks {
-            for i in 0..expected_args {
-                let expected_ty =
-                    function.parameter_types()[expected_args - i - 1].subst(&ty_args)?;
-                let ty = self.operand_stack.pop_ty()?;
-                ty.check_eq(&expected_ty)?;
-            }
-        }
 
-        let mut native_context = NativeContext::new(self, data_store, resolver, extensions);
+        let mut native_context = NativeContext::new(
+            self,
+            data_store,
+            resolver,
+            extensions,
+            gas_meter.balance_internal(),
+        );
         let native_function = function.get_native()?;
 
         gas_meter.charge_native_function_before_execution(
@@ -367,17 +368,27 @@ impl Interpreter {
 
         // Note(Gas): The order by which gas is charged / error gets returned MUST NOT be modified
         //            here or otherwise it becomes an incompatible change!!!
-        let return_values = match result.result {
-            Ok(vals) => {
-                gas_meter.charge_native_function(result.cost, Some(vals.iter()))?;
-                vals
+        let return_values = match result {
+            NativeResult::Success { cost, ret_vals } => {
+                gas_meter.charge_native_function(cost, Some(ret_vals.iter()))?;
+                ret_vals
             }
-            Err(code) => {
-                gas_meter.charge_native_function(
-                    result.cost,
+            NativeResult::Abort { cost, abort_code } => {
+                gas_meter.charge_native_function(cost, Option::<std::iter::Empty<&Value>>::None)?;
+                return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(abort_code));
+            }
+            NativeResult::OutOfGas { partial_cost } => {
+                let err = match gas_meter.charge_native_function(
+                    partial_cost,
                     Option::<std::iter::Empty<&Value>>::None,
-                )?;
-                return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(code));
+                ) {
+                    Err(err) if err.major_status() == StatusCode::OUT_OF_GAS => err,
+                    Ok(_) | Err(_) => PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                        "The partial cost returned by the native function did not cause the gas meter to trigger an OutOfGas error, at least one of them is violating the contract".to_string()
+                    ),
+                };
+
+                return Err(err);
             }
         };
 
@@ -767,7 +778,14 @@ impl Interpreter {
             }
             internal_state.push_str(format!("{}* {:?}\n", i, code[pc]).as_str());
         }
-        internal_state.push_str(format!("Locals:\n{}\n", current_frame.locals).as_str());
+        internal_state.push_str(
+            format!(
+                "Locals ({:x}):\n{}\n",
+                current_frame.locals.raw_address(),
+                current_frame.locals
+            )
+            .as_str(),
+        );
         internal_state.push_str("Operand Stack:\n");
         for value in &self.operand_stack.value {
             internal_state.push_str(format!("{}\n", value).as_str());

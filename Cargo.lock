@@ -589,6 +589,8 @@ dependencies = [
 name = "bytecode-verifier-tests"
 version = "0.1.0"
 dependencies = [
+ "fail",
+ "hex",
  "invalid-mutations",
  "move-binary-format",
  "move-bytecode-verifier",
@@ -2833,6 +2835,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "memory-stats"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d3f458a3076e337e027943b8cb5f4f72a6651714f9258fc7dcd3ae3b51f0276"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3010,6 +3022,7 @@ name = "move-bytecode-verifier"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fail",
  "hex-literal",
  "invalid-mutations",
  "move-binary-format",
@@ -3444,6 +3457,7 @@ dependencies = [
  "log",
  "move-binary-format",
  "move-command-line-common",
+ "move-compiler",
  "move-core-types",
  "move-model",
  "move-stackless-bytecode",
@@ -3716,6 +3730,7 @@ name = "move-vm-integration-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "memory-stats",
  "move-binary-format",
  "move-bytecode-verifier",
  "move-compiler",
